@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- ========================================== -->
+        <!-- Vue Formulaire - Configuration FNE         -->
+        <!-- ========================================== -->
+        <record id="view_fne_config_settings_form" model="ir.ui.view">
+            <field name="name">res.config.settings.view.form.inherit.fne</field>
+            <field name="model">res.config.settings</field>
+            <field name="priority" eval="90"/>
+            <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="inside">
+                    <app data-string="FNE" string="FNE" name="odoo_fne_connector">
+                        <block title="Configuration FNE" name="fne_setting_container">
+                            <setting id="fne_enabled_setting" string="Activer la FNE pour cette société" help="Les boutons, champs et l'envoi à la DGI ne s'affichent/s'exécutent que pour une société où ce réglage est actif. Les autres sociétés gardent le comportement Odoo standard.">
+                                <field name="fne_enabled"/>
+                            </setting>
+                            <setting id="fne_mode_setting" string="Mode" help="Environnement d'exécution (Test ou Production)" invisible="not fne_enabled">
+                                <field name="fne_mode" widget="radio"/>
+                            </setting>
+                            <setting id="fne_api_key_setting" string="Clé API FNE" help="Clé API fournie par la DGI, valable en mode Test comme en mode Production" invisible="not fne_enabled">
+                                <field name="fne_api_key" password="True"/>
+                            </setting>
+                            <setting id="fne_point_de_vente_setting" string="Point de Vente" help="Identifiant du point de vente pour le FNE (ex: SIEGE NEURONES)" invisible="not fne_enabled">
+                                <field name="fne_point_de_vente"/>
+                            </setting>
+                            <setting id="fne_establishment_setting" string="Établissement" help="Nom de l'établissement (ex: NEURONES TECHNOLOGIES SA)" invisible="not fne_enabled">
+                                <field name="fne_establishment"/>
+                            </setting>
+                            <setting id="fne_test_url_setting" string="URL Test" invisible="not fne_enabled or fne_mode != 'test'">
+                                <field name="fne_test_url"/>
+                            </setting>
+                            <setting id="fne_prod_url_setting" string="URL Production" invisible="not fne_enabled or fne_mode != 'prod'">
+                                <field name="fne_prod_url"/>
+                            </setting>
+                            <setting id="fne_auto_send_setting" string="Envoi automatique" help="Envoyer automatiquement les factures à la DGI après validation" invisible="not fne_enabled">
+                                <field name="fne_auto_send"/>
+                            </setting>
+                            <setting id="fne_external_api_key_setting" string="Clé API - Création externe de factures" help="Clé que le système externe doit fournir (header X-Api-Key) pour créer des factures via la route /fne/external/invoices" invisible="not fne_enabled">
+                                <field name="fne_external_api_key" password="True"/>
+                            </setting>
+                        </block>
+                    </app>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- ========================================== -->
+        <!-- Action pour ouvrir la configuration        -->
+        <!-- ========================================== -->
+        <record id="action_fne_config_settings" model="ir.actions.act_window">
+            <field name="name">Configuration FNE</field>
+            <field name="res_model">res.config.settings</field>
+            <field name="view_mode">form</field>
+            <field name="context">{'module': 'odoo_fne_connector'}</field>
+        </record>
+
+        <!-- ========================================== -->
+        <!-- Menu                                       -->
+        <!-- ========================================== -->
+        <menuitem id="menu_fne_config_root"
+                  name="FNE"
+                  parent="base.menu_administration"
+                  sequence="50"
+                  groups="base.group_system"/>
+
+        <menuitem id="menu_fne_config_settings"
+                  name="Paramètres"
+                  parent="menu_fne_config_root"
+                  action="action_fne_config_settings"
+                  sequence="10"
+                  groups="base.group_system"/>
+
+    </data>
+</odoo>

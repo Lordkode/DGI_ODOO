@@ -1,0 +1,16 @@
+<odoo>
+  <data>
+    <!-- Menu and group for FNE configuration (only system administrators) -->
+    <record id="group_fne_admin" model="res.groups">
+      <field name="name">FNE Admin</field>
+      <field name="category_id" ref="base.module_category_accounting"/>
+      <field name="implied_ids" eval="[(4, ref('base.group_system'))]"/>
+    </record>
+
+    <record id="menu_fne_root" model="ir.ui.menu">
+      <field name="name">FNE (DGI)</field>
+      <field name="parent_id" ref="account.menu_finance"/>
+      <field name="groups_id" eval="[(4, ref('group_fne_admin'))]"/>
+    </record>
+  </data>
+</odoo>

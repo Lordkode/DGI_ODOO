@@ -1,0 +1,321 @@
+{
+  "info": {
+    "name": "FNE - Création externe de factures",
+    "description": "Tests de la route POST /fne/external/invoices exposée par le module odoo_fne_connector, qui permet à un système externe de créer une facture Odoo et de la certifier à la DGI (FNE) en un seul appel.\n\nAvant de lancer les tests :\n1. Régler la variable de collection `base_url` sur l'URL de votre instance Odoo.\n2. Régler `api_key` sur la clé configurée dans Configuration > Paramètres > Section FNE > \"Clé API - Création externe de factures\".\n3. Adapter `existing_partner_email` et `existing_product_ref` à des données réellement présentes dans votre base (un client avec téléphone+email renseignés, un produit avec une référence interne).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8069", "type": "string" },
+    { "key": "api_key", "value": "TEST-EXTERNAL-KEY-123", "type": "string" },
+    { "key": "existing_partner_email", "value": "contact1@exemple-demo.ci", "type": "string" },
+    { "key": "existing_product_ref", "value": "DEMO-001", "type": "string" },
+    { "key": "idempotency_ref", "value": "BATCH-POSTMAN-0001", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Authentification",
+      "item": [
+        {
+          "name": "Sans clé API (attendu: 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "pm.test('success is false', () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mauvaise clé API (attendu: 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "cle-invalide" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Erreurs de validation",
+      "item": [
+        {
+          "name": "Aucune ligne fournie (attendu: 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partner\": { \"email\": \"{{existing_partner_email}}\" },\n  \"lines\": []\n}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Message mentionne lines', () => pm.expect(pm.response.json().error).to.include('lines'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Produit introuvable (attendu: 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partner\": { \"email\": \"{{existing_partner_email}}\" },\n  \"lines\": [\n    { \"product_ref\": \"REF-QUI-N-EXISTE-PAS\", \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Message mentionne le produit', () => pm.expect(pm.response.json().error).to.include('REF-QUI-N-EXISTE-PAS'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Méthode de paiement invalide (attendu: 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partner\": { \"email\": \"{{existing_partner_email}}\" },\n  \"payment_method\": \"bitcoin\",\n  \"lines\": [\n    { \"product_ref\": \"{{existing_product_ref}}\", \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Client à créer sans téléphone/email (attendu: 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partner\": { \"name\": \"Client Incomplet\" },\n  \"lines\": [\n    { \"product_ref\": \"{{existing_product_ref}}\", \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nouveau client B2B sans NCC (attendu: 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partner\": {\n    \"name\": \"Entreprise Sans NCC\",\n    \"phone\": \"+225 01 01 01 01 01\",\n    \"email\": \"sans-ncc@exemple-demo.ci\",\n    \"template\": \"b2b\"\n  },\n  \"lines\": [\n    { \"product_ref\": \"{{existing_product_ref}}\", \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test(\"Message mentionne le NCC\", () => pm.expect(pm.response.json().error).to.include('NCC'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Cas nominaux",
+      "item": [
+        {
+          "name": "Facture avec client et produit existants",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_ref\": \"{{idempotency_ref}}\",\n  \"partner\": { \"email\": \"{{existing_partner_email}}\" },\n  \"payment_method\": \"virement\",\n  \"lines\": [\n    { \"product_ref\": \"{{existing_product_ref}}\", \"quantity\": 2 }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('success is true', () => pm.expect(json.success).to.eql(true));",
+                  "pm.test('already_exists is false', () => pm.expect(json.already_exists).to.eql(false));",
+                  "pm.test('invoice_name est renseigné', () => pm.expect(json.invoice_name).to.be.a('string'));",
+                  "pm.collectionVariables.set('last_invoice_id', json.invoice_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rejeu du même appel (idempotence, attendu: 200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_ref\": \"{{idempotency_ref}}\",\n  \"partner\": { \"email\": \"{{existing_partner_email}}\" },\n  \"payment_method\": \"virement\",\n  \"lines\": [\n    { \"product_ref\": \"{{existing_product_ref}}\", \"quantity\": 2 }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('already_exists is true', () => pm.expect(json.already_exists).to.eql(true));",
+                  "pm.test(\"C'est bien la même facture\", () => pm.expect(json.invoice_id).to.eql(pm.collectionVariables.get('last_invoice_id')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nouveau client B2B auto-créé (avec NCC)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_ref\": \"BATCH-POSTMAN-B2B-{{$randomInt}}\",\n  \"partner\": {\n    \"external_ref\": \"CLI-POSTMAN-{{$randomInt}}\",\n    \"name\": \"Entreprise Postman SARL\",\n    \"phone\": \"+225 07 12 34 56 78\",\n    \"email\": \"postman-b2b-{{$randomInt}}@exemple-demo.ci\",\n    \"vat\": \"CI{{$randomInt}}{{$randomInt}}\",\n    \"template\": \"b2b\",\n    \"regime_fiscal\": \"tva\"\n  },\n  \"payment_method\": \"card\",\n  \"lines\": [\n    { \"product_ref\": \"{{existing_product_ref}}\", \"quantity\": 1, \"price_unit\": 100000, \"description\": \"Ligne de test Postman\" }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nouveau client B2C auto-créé, facture brouillon (sans envoi FNE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Api-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_ref\": \"BATCH-POSTMAN-B2C-{{$randomInt}}\",\n  \"partner\": {\n    \"name\": \"Client Particulier Postman\",\n    \"phone\": \"+225 05 55 55 55 55\",\n    \"email\": \"postman-b2c-{{$randomInt}}@exemple-demo.ci\",\n    \"template\": \"b2c\"\n  },\n  \"payment_method\": \"espece\",\n  \"auto_post\": false,\n  \"send_to_fne\": false,\n  \"lines\": [\n    { \"product_ref\": \"{{existing_product_ref}}\", \"quantity\": 5 }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/fne/external/invoices", "host": ["{{base_url}}"], "path": ["fne", "external", "invoices"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('state is draft (auto_post=false)', () => pm.expect(json.state).to.eql('draft'));",
+                  "pm.test('fne_certified is false (send_to_fne=false)', () => pm.expect(json.fne_certified).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

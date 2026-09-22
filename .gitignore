@@ -1,0 +1,50 @@
+# --- Secrets / environnement ---
+.env
+*.env
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.installed.cfg
+*.egg
+.venv/
+venv/
+env/
+ENV/
+
+# --- Outils Python (lint/type-check/test) ---
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# --- Odoo ---
+# Filestore/sessions si jamais montés en local (le docker-compose actuel utilise
+# des volumes Docker nommés, hors du repo, mais on se protège si ça change).
+filestore/
+sessions/
+*.log
+odoo.conf
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- IDE / éditeurs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS ---
+.DS_Store
+Thumbs.db

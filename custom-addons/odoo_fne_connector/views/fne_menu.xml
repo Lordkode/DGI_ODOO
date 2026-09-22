@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<menuitem id="menu_fne_config_root" name="FNE" parent="base.menu_administration" sequence="1000"/>
+</odoo>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_move_form_inherit_fne_main" model="ir.ui.view">
+            <field name="name">account.move.form.inherit.fne.main</field>
+            <field name="model">account.move</field>
+            <field name="inherit_id" ref="account.view_move_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//header" position="inside">
+                    <field name="fne_sent" invisible="1"/>
+                    <field name="fne_warning" invisible="1"/>
+                    <field name="fne_company_enabled" invisible="1"/>
+
+                    <button name="action_send_to_fne"
+                            string="Créer FNE"
+                            type="object"
+                            class="btn-primary"
+                            invisible="fne_sent or state in ('draft', 'cancel') or not fne_company_enabled"/>
+
+                    <button name="action_open_fne_link"
+                            string="Voir FNE"
+                            type="object"
+                            class="oe_highlight"
+                            invisible="not fne_sent"/>
+                </xpath>
+
+                <xpath expr="//sheet" position="before">
+                    <div class="alert alert-warning mb-0" role="alert"
+                         invisible="not fne_warning">
+                        La DGI a renvoyé un avertissement pour cette facture.
+                    </div>
+                </xpath>
+
+                <xpath expr="//field[@name='invoice_payment_term_id']" position="after">
+                    <field name="modes_paiement" invisible="not fne_company_enabled"/>
+                </xpath>
+
+                <xpath expr="//notebook" position="before">
+                    <group string="Informations de Certification FNE / DGI"
+                           invisible="not fne_sent">
+                        <field name="fne_reference_dgi" readonly="1"/>
+                        <field name="fne_verification_url" widget="url" readonly="1"/>
+                        <field name="invoice_id_from_fne" readonly="1"/>
+                    </group>
+                    <group string="Origine" invisible="not fne_external_ref">
+                        <field name="fne_external_ref" readonly="1"/>
+                    </group>
+                </xpath>
+
+            </field>
+        </record>
+
+        <record id="view_invoice_tree_inherit_fne" model="ir.ui.view">
+            <field name="name">account.move.tree.inherit.fne</field>
+            <field name="model">account.move</field>
+            <field name="inherit_id" ref="account.view_move_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//list" position="attributes">
+                    <attribute name="decoration-success">fne_sent</attribute>
+                </xpath>
+                <xpath expr="//field[@name='state']" position="after">
+                    <field name="fne_sent" invisible="1"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>
